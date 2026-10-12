@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_generation
+    description: One row per timestamp and production type, cleaned and classified.
+    columns:
+      - name: value_mw
+        tests: [not_null]
+      - name: production_type
+        tests: [not_null]
+
+  - name: stg_prices
+    description: Day-ahead prices with a negative-price flag.
+    columns:
+      - name: timestamp_utc
+        tests: [not_null]
+
+  - name: stg_weather
+    description: Hourly weather with wind speed converted to m/s.
+    columns:
+      - name: timestamp_utc
+        tests: [not_null, unique]
+      - name: wind_speed_100m_ms
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 60
+              severity: warn

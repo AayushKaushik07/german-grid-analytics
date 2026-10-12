@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: >
+      Landing tables written by the Python ingestion job. Never edited by hand
+      and never queried directly outside the staging layer.
+    tables:
+      - name: generation
+        description: Generation and load by production type, 15-minute grain, MW.
+        loaded_at_field: ingested_at_utc
+        freshness:
+          warn_after: {count: 36, period: hour}
+          error_after: {count: 72, period: hour}
+        columns:
+          - name: timestamp_utc
+            tests: [not_null]
+          - name: production_type
+            tests: [not_null]
+      - name: day_ahead_prices
+        description: Day-ahead auction prices for the DE-LU bidding zone, EUR/MWh.
+        columns:
+          - name: timestamp_utc
+            tests: [not_null]
+      - name: weather
+        description: ERA5 hourly reanalysis weather at the German centroid.
+        columns:
+          - name: timestamp_utc
+            tests: [not_null, unique]

@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: fct_grid_hourly
+    description: >
+      Hourly fact table joining generation mix, day-ahead price and weather.
+      Grain: one row per hour (UTC). This is the table Power BI connects to.
+    columns:
+      - name: timestamp_utc
+        description: Hour start, UTC. Primary key.
+        tests: [not_null, unique]
+      - name: load_mw
+        description: Average German electricity demand during the hour, MW.
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 20000
+              max_value: 100000
+              severity: warn
+      - name: renewable_share_of_load_pct
+        description: >
+          Renewable generation as a share of load. Can exceed 100 % when Germany
+          exports surplus power; the warning above 120 % flags the ~40 sunniest and
+          windiest hours of 2024-2025 (max 131 %) for review, it is not an error.
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 120
+              severity: warn
+      - name: price_eur_mwh
+        description: Day-ahead price. Can legitimately be negative.
+      - name: conventional_mw
+        description: >
+          Non-renewable generation, MW. Never negative: a negative value means
+          trade or storage flows leaked into the generation total.
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: lignite_mw
+        description: >
+          Brown coal, MW. Null in every row would mean the production type name
+          no longer matches the source.
+        tests: [not_null]
+
+  - name: fct_daily_summary
+    description: Daily rollup for multi-year trend reporting.
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+      - name: hours_observed
+        description: Should be 24 except on DST switch days (23 or 25).
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 23
+              max_value: 25
+              severity: warn
+
+  - name: dim_date
+    description: Date dimension for Power BI time intelligence.
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
